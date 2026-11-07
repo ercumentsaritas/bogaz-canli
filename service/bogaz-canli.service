@@ -1,0 +1,12 @@
+[Unit]
+Description=Bogaz Canli - AIS gemi servisi
+After=network-online.target
+
+[Service]
+ExecStart=/usr/bin/python3 %h/.local/share/bogaz-canli/bogaz_ais.py
+Restart=on-failure
+RestartSec=10
+Nice=10
+
+[Install]
+WantedBy=default.target

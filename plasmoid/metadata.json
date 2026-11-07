@@ -1,0 +1,13 @@
+{
+    "KPackageStructure": "Plasma/Wallpaper",
+    "KPlugin": {
+        "Authors": [ { "Name": "Ercüment" } ],
+        "Description": "İstanbul Boğazı, gemiler canlı AIS verisiyle hareket ediyor",
+        "Icon": "preferences-desktop-wallpaper",
+        "Id": "com.ercument.bogazcanli",
+        "License": "MIT",
+        "Name": "Boğaz Canlı",
+        "Version": "1.0"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

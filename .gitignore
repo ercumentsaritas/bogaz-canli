@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+*.png
+# kisisel ayarlar (API anahtari)
+config.json

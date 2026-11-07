@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kcfg xmlns="http://www.kde.org/standards/kcfg/1.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0 http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
+  <kcfgfile name=""/>
+  <group name="General">
+    <entry name="ServiceUrl" type="String"><default>http://127.0.0.1:8765/ships.json</default></entry>
+    <entry name="Fps" type="Int"><default>10</default></entry>
+    <entry name="ShowStatus" type="Bool"><default>true</default></entry>
+    <entry name="NightTint" type="Bool"><default>true</default></entry>
+    <entry name="ShipScale" type="Double"><default>1.0</default></entry>
+  </group>
+</kcfg>

@@ -1,0 +1,7 @@
+{
+  "api_key": "",
+  "mode": "auto",
+  "port": 8765,
+  "stale_minutes": 15,
+  "fallback_after_seconds": 300
+}
