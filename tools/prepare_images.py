@@ -2,7 +2,7 @@
 """
 Isometric Istanbul ekran goruntusunden duvar kagidi gorsellerini uretir:
   1) gomulu gemileri ve dumen sularini siler  -> bosphorus.jpg
-  2) sehir isikli gece surumunu olusturur     -> bosphorus_night.jpg
+  2) gece tabani + saate gore sonen isik katmanlari -> bosphorus_night.jpg, lights_evening.png, lights_late.png
 
 Kullanim:  python3 tools/prepare_images.py ekran_goruntusu.png
 Gereken:   pip install opencv-python numpy
@@ -110,26 +110,43 @@ def make_night(clean):
     sodium = np.array([0.08, 0.42, 1.00], np.float32)
     mixc = np.clip(0.35 + greyish * 0.5 + 0.4 * (n2 - 0.5), 0, 1)[...,None]
     col = mixc * sodium + (1 - mixc) * warm
-    E = m[...,None] * col * 1.35 + m_shore[...,None] * warm
-    # parlak noktalar: sokak isiginin yerel tepe noktalari
+    ws = np.clip(greyish, 0, 1) ** 2.5                      # yol benzeri -> sokak lambasi
+    # bina isiklari: kucuk kumeler halinde uc gruba ayrilir
+    g = blur(rng.random((H, W)).astype(np.float32), 2.5)
+    g = (g.argsort(axis=None).argsort().reshape(H, W) / (H * W)).astype(np.float32)   # duzgun dagilim
+    gA = (g < 0.55).astype(np.float32)          # aksam isiklari: gece yarisindan sonra soner
+    gB = ((g >= 0.55) & (g < 0.85)).astype(np.float32)   # gec saatlere kadar
+    gC = (g >= 0.85).astype(np.float32)         # butun gece yanan
+    mb = (m * (1 - ws))[..., None] * col * 1.35
+    E_street = (m * ws)[..., None] * col * 1.35 + m_shore[..., None] * warm
     mx = cv2.dilate(streets, np.ones((7,7),np.uint8))
     peaks = (streets >= mx) & (streets > 0.5) & (dark > 0.5) & (rng.random((H, W)) < 0.6 * np.clip(cl, 0, 1))
-    E[peaks] += np.array([0.55, 0.85, 1.0]) * 1.4
-    # pencere noktaciklari (az)
+    E_street[peaks] += np.array([0.55, 0.85, 1.0]) * 1.4
     pts = (rng.random((H, W)) < urban * dark * 0.004 * cl)
-    E[pts] += np.array([0.7, 0.85, 1.0]) * rng.uniform(0.5, 1, (pts.sum(), 1))
+    win = np.zeros_like(E_street); win[pts] = np.array([0.7, 0.85, 1.0]) * rng.uniform(0.5, 1, (pts.sum(), 1))
+    E_A = (mb + win) * gA[..., None]
+    E_B = (mb + win) * gB[..., None]
+    E_C = (mb + win) * gC[..., None] + E_street
 
-    hi = np.clip(E - 0.35, 0, None)
-    glow = blur(E, 1.5) * 0.35 + blur(hi, 6) * 1.2 + blur(E, 18) * 0.35
-
-    # gece tabani: koyu, mavimsi
+    def glow_of(E):
+        hi = np.clip(E - 0.35, 0, None)
+        return blur(E, 1.5) * 0.35 + blur(hi, 6) * 1.2 + blur(E, 18) * 0.35
+    wf = np.where(water[...,None] > 0, 0.55, 0.45)
     base = img * np.array([0.075, 0.055, 0.045], np.float32) + np.array([0.03, 0.015, 0.008], np.float32)
     base[water > 0] = img[water > 0] * np.array([0.19, 0.11, 0.055]) + np.array([0.04, 0.02, 0.008])
-    out = base + E * 0.9 + glow * np.where(water[...,None] > 0, 0.55, 0.45)
-    # hafif ton egrisi
-    out = 1 - np.exp(-out * 1.35)
-    out = np.clip(out, 0, 1)
-    return (out * 255).astype(np.uint8)
+    tone = lambda x: np.clip(1 - np.exp(-x * 1.35), 0, 1)
+    lin_C = base + E_C * 0.9 + glow_of(E_C) * wf
+    B0 = tone(lin_C)
+    def overlay(Ex):
+        F = tone(lin_C + Ex * 0.9 + glow_of(Ex) * wf)
+        d = np.clip(F - B0, 0, None)
+        a = np.clip((d / np.maximum(1 - B0, 1e-3)).max(axis=2), 0, 1)
+        c = np.clip(B0 + d / np.maximum(a[..., None], 1e-3), 0, 1)
+        c[a < 1e-3] = 0
+        return np.dstack([c * 255, a * 255]).round().astype(np.uint8), F
+    oA, FA = overlay(E_A)
+    oB, FB = overlay(E_B)
+    return (B0 * 255).astype(np.uint8), oA, oB
 
 
 def main():
@@ -149,7 +166,10 @@ def main():
     print(f"{n} gemi silindi")
     cv2.imwrite(os.path.join(out_dir, "bosphorus.jpg"), clean, [cv2.IMWRITE_JPEG_QUALITY, 93])
     print("gece gorseli uretiliyor...")
-    cv2.imwrite(os.path.join(out_dir, "bosphorus_night.jpg"), make_night(clean), [cv2.IMWRITE_JPEG_QUALITY, 92])
+    base, evening, late = make_night(clean)
+    cv2.imwrite(os.path.join(out_dir, "bosphorus_night.jpg"), base, [cv2.IMWRITE_JPEG_QUALITY, 92])
+    cv2.imwrite(os.path.join(out_dir, "lights_evening.png"), evening, [cv2.IMWRITE_PNG_COMPRESSION, 9])
+    cv2.imwrite(os.path.join(out_dir, "lights_late.png"), late, [cv2.IMWRITE_PNG_COMPRESSION, 9])
     print("tamam ->", os.path.normpath(out_dir))
 
 if __name__ == "__main__":

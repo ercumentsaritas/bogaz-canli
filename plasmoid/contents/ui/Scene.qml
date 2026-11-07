@@ -1,5 +1,6 @@
 import QtQuick
 import "geo.js" as Geo
+import "sun.js" as Sun
 
 // Saf QtQuick sahnesi: Plasma'dan bagimsiz, test edilebilir.
 Item {
@@ -26,17 +27,17 @@ Item {
     property var ships: ({})          // id -> Ship item
     property real serverOffset: 0     // localNow - serverNow (sn)
 
-    // gece/gunduz: 0 = gunduz, 1 = tam gece
+    // gece/gunduz: 0 = gunduz, 1 = tam gece (gunesin gercek yuksekligine gore)
     property real night: 0
+    property real eveningOn: 1   // aksam isiklari (gece yarisindan sonra soner)
+    property real lateOn: 1      // gec saat isiklari
+    property var debugDate: null // test icin sabit saat
     function updateNight() {
+        var d = debugDate ? debugDate : new Date()
         if (!nightTint) { night = 0; return }
-        var d = new Date(), h = d.getHours() + d.getMinutes() / 60
-        // Istanbul icin kaba gun dogumu/batimi: 06:30-19:00, 1 saatlik gecis
-        var n = 0
-        if (h < 5.5 || h > 20) n = 1
-        else if (h < 6.5) n = 6.5 - h
-        else if (h > 19) n = h - 19
-        night = Math.max(0, Math.min(1, n))
+        night = Sun.nightFactor(d)
+        eveningOn = Sun.eveningLights(d)
+        lateOn = Sun.lateLights(d)
     }
 
     Rectangle { anchors.fill: parent; color: "#0d3b55" }
@@ -67,6 +68,21 @@ Item {
             asynchronous: true
             cache: false
             smooth: true
+        }
+        // saate gore sonen bina isiklari
+        Image {
+            anchors.fill: parent
+            source: scene.night > 0.01 ? Qt.resolvedUrl("../images/lights_evening.png") : ""
+            opacity: scene.night * scene.eveningOn
+            visible: opacity > 0.01
+            asynchronous: true; cache: false; smooth: true
+        }
+        Image {
+            anchors.fill: parent
+            source: scene.night > 0.01 ? Qt.resolvedUrl("../images/lights_late.png") : ""
+            opacity: scene.night * scene.lateOn
+            visible: opacity > 0.01
+            asynchronous: true; cache: false; smooth: true
         }
         // Kiz Kulesi
         Rectangle {
@@ -155,6 +171,6 @@ Item {
 
     Timer { interval: scene.pollMs; running: scene.running; repeat: true; triggeredOnStart: true; onTriggered: scene.poll() }
     Timer { interval: Math.round(1000 / Math.max(1, scene.fps)); running: scene.running; repeat: true; onTriggered: scene.frame() }
-    Timer { interval: 60000; running: true; repeat: true; triggeredOnStart: true; onTriggered: scene.updateNight() }
+    Timer { interval: 30000; running: true; repeat: true; triggeredOnStart: true; onTriggered: scene.updateNight() }
     onNightTintChanged: updateNight()
 }

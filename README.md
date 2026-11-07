@@ -7,7 +7,11 @@ konumlarıyla çizilir.
 
 | Gündüz | Gece |
 |---|---|
-| ![Gündüz](docs/gunduz.jpg) | ![Gece](docs/gece.jpg) |
+| ![Gündüz](docs/gunduz.jpg) | ![Gece 21:00](docs/gece.jpg) |
+
+| Gece 03:00 |
+|---|
+| ![Gece 03:00](docs/gece_0300.jpg) |
 
 *A live KDE Plasma 6 wallpaper of the Istanbul Bosphorus: scheduled ferries, transiting ships,
 night city lights, and real vessels from AIS when coverage is available.*
@@ -28,7 +32,11 @@ Gemi trafiği simülasyonu ─────┘     (systemd user servisi)
 - **Canlı AIS (karma mod):** [AISStream.io](https://aisstream.io) ile görüntü alanına giren gerçek
   gemiler çizilir. Gerçek veri yeterli olduğunda simülasyon kendiliğinden çekilir.
 - **Gece görünümü:** Gündüz görselindeki sokak dokusundan üretilmiş şehir ışıkları. Köprüde LED
-  aydınlatma, gemilerde seyir fenerleri. Akşam 19:00 civarında başlayan yumuşak bir geçişle açılır.
+  aydınlatma, gemilerde seyir fenerleri.
+- **Gerçek gün döngüsü:** Gece, güneşin İstanbul'daki gerçek yüksekliğine göre gelir; gün batımından
+  sivil alacakaranlığın sonuna kadar yumuşak bir geçiş olur, yıl boyunca kendiliğinden kayar.
+  Bina ışıkları 23:00'ten sonra sönmeye başlar, 03:00'te en azdır (sokak lambaları yanık kalır),
+  sabah yeniden artar. Cuma ve Cumartesi geceleri şehir bir saat geç yatar.
 - **Hafif:** Chromium kullanmaz; Plasma'nın kendi QML motorunda varsayılan 10 FPS ile çalışır.
   Servis yalnızca Python standart kütüphanesini kullanır; canlı mod için `websockets` gerekir.
 
