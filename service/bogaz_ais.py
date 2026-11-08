@@ -269,112 +269,210 @@ class Sim:
         threading.Thread(target=loop, daemon=True).start()
 
 # ---------------------------------------------------------------- tarifeli vapurlar
-# Kaynak: Sehir Hatlari 2026-2027 kis tarifesi (e-yasamrehberi.com, 7 Eylul 2026 guncellemesi).
-# Gun tipleri: all = her gun, wd = hafta ici, ms = Pzt-Cmt, fs = yalniz Cuma ve Cumartesi gecesi
-# (gece yarisindan sonraki saatler bir onceki gunun servisine sayilir).
-# Uskudar-Besiktas (Dentur) ve Halic hatti icin tam tarife yayinlanmadigindan yaklasik siklik kullanilir.
+# Kaynak: Sehir Hatlari 2026-2027 kis tarifesi (e-yasamrehberi.com aktarimi, 7 Eylul 2026).
+# Gun tipleri: all=her gun, wd=hafta ici, ms=Pzt-Cmt, sat=Cmt, su=Pazar, we=Cmt+Paz,
+#              fs=Cuma ve Cumartesi gecesi (gece yarisindan sonraki saatler onceki gune sayilir).
+# FARN/FARS: gorselin disindaki kuzey (Bogaz) ve guney-dogu (Bostanci) iskeleleri; o ucta
+# gemi gorunur alana normal seyir hiziyla girer/cikar.
+# Uskudar-Besiktas (Dentur) icin tam tarife yayinlanmadigindan 15 dk aralik varsayilir.
+
 def _every(start, end, step):
     h, m = map(int, start.split(":")); eh, em = map(int, end.split(":"))
     a, b = h * 60 + m, eh * 60 + em
     if b < a: b += 1440
     return " ".join("%02d:%02d" % ((t // 60) % 24, t % 60) for t in range(a, b + 1, step))
 
-TIMETABLE = [
- # (hat adi, [(gun_tipi, "saatler")], [(yol, ters_mi, sure_dk, iskelede_bekleme_dk), ...])
- ("KADIKOY-KARAKOY-EMINONU",
-  [("wd", "06:10"), ("ms", "06:30 06:45"),
-   ("all", _every("07:00", "20:00", 20))],
-  [("KAD_KAR", False, 17, 3), ("KAR_EMI", False, 3, 0)]),
- ("KADIKOY-KARAKOY",
-  [("all", "20:30 21:00 21:30 22:00 22:30 23:00 23:30 00:00 00:30 01:00")],
-  [("KAD_KAR", False, 20, 0)]),
- ("EMINONU-KADIKOY",
-  [("ms", "07:15"),
-   ("all", "07:30 07:50 08:10 08:30 08:50 09:10 09:35 09:55 10:15 10:35 10:55 11:15 11:35 11:55 "
-           "12:15 12:35 12:55 13:15 13:35 13:55 14:15 14:35 14:55 15:15 15:35 15:55 16:15 16:35 "
-           "16:55 17:15 17:35 17:55 18:15 18:35 18:55 19:15 19:35 19:55 20:15 20:35 21:05")],
-  [("KAD_EMI", True, 20, 0)]),
- ("KARAKOY-KADIKOY",
-  [("wd", "06:35"), ("ms", "06:55"),
-   ("all", "21:30 22:00 22:30 23:00 23:30 00:00 00:30 01:00")],
-  [("KAD_KAR", True, 20, 0)]),
- ("USKUDAR-KARAKOY-EMINONU",
-  [("all", "07:00 08:00 09:00 09:20 09:40 10:00 10:20 10:40 11:00 11:20 11:40 12:00 12:20 12:40 "
-           "13:00 13:20 13:40 14:00 14:20 14:40 15:00 16:00 16:20 17:20 18:20")],
-  [("USK_KAR", False, 13, 2), ("KAR_EMI", False, 3, 0)]),
- ("USKUDAR-EMINONU",
-  [("ms", "06:25 06:40"),
-   ("all", "07:20 07:40 08:20 08:40 15:20 15:40 16:40 17:00 17:40 18:00 18:40 19:00 19:20 19:40 "
-           "20:00 20:30 21:00 21:30 22:00")],
-  [("USK_EMI", False, 15, 0)]),
- ("EMINONU-USKUDAR",
-  [("ms", "06:40 07:00"),
-   ("all", "07:20 07:40 08:00 08:20 08:40 09:00 09:25 09:45 10:05 10:25 10:45 11:05 11:25 11:45 "
-           "12:05 12:25 12:45 13:05 13:25 13:45 14:05 14:25 14:45 15:05 15:25 15:45 16:05 16:25 "
-           "16:45 17:05 17:25 17:45 18:05 18:25 18:45 19:00 19:20 19:40 20:00 20:30 21:00 21:30 "
-           "22:00 22:30")],
-  [("USK_EMI", True, 15, 0)]),
- ("KADIKOY-BESIKTAS",
-  [("wd", "06:45"), ("ms", "07:20"), ("all", _every("07:45", "23:15", 30)),
-   ("fs", "23:45 00:15 00:45 01:15 01:30 02:35 03:45 04:55")],
-  [("KAD_BES", False, 25, 0)]),
- ("BESIKTAS-KADIKOY",
-  [("wd", "07:15"), ("ms", "07:45"), ("all", _every("08:15", "23:45", 30)),
-   ("fs", "00:15 00:45 01:15 01:45 02:05 03:10 04:20 05:30")],
-  [("KAD_BES", True, 25, 0)]),
- ("USKUDAR-BESIKTAS",                       # Dentur, yaklasik 15 dk arayla
-  [("all", _every("06:10", "00:45", 15))],
-  [("USK_BES", False, 7, 0)]),
- ("BESIKTAS-USKUDAR",
-  [("all", _every("06:20", "00:50", 15))],
-  [("USK_BES", True, 7, 0)]),
- ("HALIC",                                  # yaklasik, saatlik
-  [("all", _every("07:30", "20:30", 60))],
-  [("HALIC", False, 25, 0)]),
- ("HALIC-DONUS",
-  [("all", _every("08:15", "21:15", 60))],
-  [("HALIC", True, 25, 0)]),
+# Duzenli hatlar: (hat, [(gun, "kalkis saatleri")], [(iskele, dk_ofset), ...])
+PATTERNS = [
+ ("KADIKOY-KARAKOY-EMINONU", [("wd", "06:10"), ("ms", "06:30 06:45"), ("all", _every("07:00", "20:00", 20))],
+  [("KAD", 0), ("KAR", 18), ("EMI", 23)]),
+ ("KADIKOY-KARAKOY", [("all", "20:30 21:00 21:30 22:00 22:30 23:00 23:30 00:00 00:30 01:00")],
+  [("KAD", 0), ("KAR", 20)]),
+ ("EMINONU-KADIKOY", [("ms", "07:15"), ("all", "07:30 07:50 08:10 08:30 08:50 09:10 09:35 09:55 10:15 10:35 "
+   "10:55 11:15 11:35 11:55 12:15 12:35 12:55 13:15 13:35 13:55 14:15 14:35 14:55 15:15 15:35 15:55 16:15 "
+   "16:35 16:55 17:15 17:35 17:55 18:15 18:35 18:55 19:15 19:35 19:55 20:15 20:35 21:05")],
+  [("EMI", 0), ("KAD", 20)]),
+ ("KARAKOY-KADIKOY", [("wd", "06:35"), ("ms", "06:55"), ("all", "21:30 22:00 22:30 23:00 23:30 00:00 00:30 01:00")],
+  [("KAR", 0), ("KAD", 20)]),
+ ("USKUDAR-KARAKOY-EMINONU", [("all", "07:00 08:00 09:00 09:20 09:40 10:00 10:20 10:40 11:00 11:20 11:40 12:00 "
+   "12:20 12:40 13:00 13:20 13:40 14:00 14:20 14:40 15:00 16:00 16:20 17:20 18:20")],
+  [("USK", 0), ("KAR", 15), ("EMI", 20)]),
+ ("USKUDAR-EMINONU", [("ms", "06:25 06:40"), ("all", "07:20 07:40 08:20 08:40 15:20 15:40 16:40 17:00 17:40 "
+   "18:00 18:40 19:00 19:20 19:40 20:00 20:30 21:00 21:30 22:00")],
+  [("USK", 0), ("EMI", 15)]),
+ ("EMINONU-USKUDAR", [("ms", "06:40 07:00"), ("all", "07:20 07:40 08:00 08:20 08:40 09:00 09:25 09:45 10:05 10:25 "
+   "10:45 11:05 11:25 11:45 12:05 12:25 12:45 13:05 13:25 13:45 14:05 14:25 14:45 15:05 15:25 15:45 16:05 16:25 "
+   "16:45 17:05 17:25 17:45 18:05 18:25 18:45 19:00 19:20 19:40 20:00 20:30 21:00 21:30 22:00 22:30")],
+  [("EMI", 0), ("USK", 15)]),
+ ("KADIKOY-BESIKTAS", [("wd", "06:45"), ("ms", "07:20"), ("all", _every("07:45", "23:15", 30)),
+   ("fs", "23:45 00:15 00:45 01:15 01:30 02:35 03:45 04:55")], [("KAD", 0), ("BES", 25)]),
+ ("BESIKTAS-KADIKOY", [("wd", "07:15"), ("ms", "07:45"), ("all", _every("08:15", "23:45", 30)),
+   ("fs", "00:15 00:45 01:15 01:45 02:05 03:10 04:20 05:30")], [("BES", 0), ("KAD", 25)]),
+ ("USKUDAR-BESIKTAS (Dentur)", [("all", _every("06:10", "00:45", 15))], [("USK", 0), ("BES", 8)]),
+ ("BESIKTAS-USKUDAR (Dentur)", [("all", _every("06:20", "00:50", 15))], [("BES", 0), ("USK", 8)]),
+ # --- Halic ---
+ ("HALIC USKUDAR-EYUP", [("ms", "07:30 08:30 09:30"), ("su", "20:45"),
+   ("all", "10:30 11:30 12:30 13:30 14:30 15:30 16:40 17:40 18:40 19:45")],
+  [("USK", 0), ("KAR", 15), ("KAS", 25), ("FEN", 30), ("BAL", 35), ("HAS", 40), ("AYV", 45), ("SUT", 50), ("EYU", 55)]),
+ ("HALIC EYUP-USKUDAR", [("ms", "07:30 08:30 09:30"), ("su", "20:45"),
+   ("all", "10:30 11:30 12:30 13:30 14:30 15:30 16:40 17:40 18:40 19:45")],
+  [("EYU", 0), ("SUT", 5), ("AYV", 10), ("HAS", 15), ("BAL", 20), ("FEN", 25), ("KAS", 30), ("KAR", 40), ("USK", 55)]),
+ ("HALIC BESIKTAS-EYUP", [("ms", "07:15"), ("su", "10:15"), ("all", "11:15 12:15 17:20 18:20 19:25")],
+  [("BES", 0), ("KAB", 10), ("KAR", 20), ("KAS", 30), ("HAS", 40), ("SUT", 45), ("EYU", 50)]),
+ ("HALIC EYUP-BESIKTAS", [("ms", "07:20"), ("su", "10:20"), ("all", "11:20 12:20 17:20 18:20 19:20")],
+  [("EYU", 0), ("SUT", 5), ("HAS", 10), ("KAS", 20), ("KAR", 30), ("KAB", 40), ("BES", 45)]),
+ ("HALIC KADIKOY-EYUP", [("ms", "08:00 09:00"), ("su", "14:00 20:10"), ("all", "11:00 13:00 15:00 16:05 17:05 19:10")],
+  [("KAD", 0), ("KAS", 30), ("FEN", 35), ("HAS", 40), ("SUT", 45), ("EYU", 50)]),
+ ("HALIC KADIKOY-EYUP ", [("ms", "07:05"), ("all", "18:10")],
+  [("KAD", 0), ("KAS", 25), ("FEN", 30), ("HAS", 35), ("SUT", 40), ("EYU", 45)]),
+ ("HALIC EYUP-KADIKOY", [("ms", "07:05 08:05 09:05"), ("su", "15:05 20:05"),
+   ("all", "10:05 12:05 14:05 16:05 17:05 18:05 19:05")],
+  [("EYU", 0), ("SUT", 5), ("HAS", 10), ("FEN", 15), ("KAS", 25), ("KAD", 50)]),
+ # --- Bogaz ---
+ ("EMINONU-RUMELI KAVAGI", [("all", "09:35 11:10 12:15 13:35 14:10 15:10 16:10 17:25 18:05 18:55 20:20")],
+  [("EMI", 0), ("BES", 15), ("ORT", 25), ("FARN", None)]),
+ ("EMINONU-RUMELI KAVAGI ", [("all", "10:15")], [("EMI", 0), ("BES", 15), ("FARN", None)]),
+ ("RUMELI KAVAGI-EMINONU", [("all", "08:35 09:35 10:35 11:40 12:50 13:30 15:30 16:50 17:30 18:25 19:45")],
+  [("FARN", None), ("ORT", 0), ("BES", 10), ("EMI", 25)]),
+ ("RUMELI KAVAGI-EMINONU ", [("all", "14:40")], [("FARN", None), ("BES", 0), ("EMI", 15)]),
+ ("ORTAKOY-BESIKTAS-EMINONU", [("all", "11:15 12:30 14:45 16:10 17:05 19:55 21:15"), ("we", "17:25")],
+  [("ORT", 0), ("BES", 10), ("EMI", 25)]),
+ ("EMINONU-BESIKTAS-ORTAKOY", [("all", "10:45 11:55 13:10 15:40 16:35 19:25 20:30"), ("we", "16:55")],
+  [("EMI", 0), ("BES", 15), ("ORT", 25)]),
+ ("UZUN BOGAZ TURU", [("all", "10:35")], [("EMI", 0), ("BES", 15), ("USK", 30), ("FARN", None)]),
+ ("UZUN BOGAZ TURU DONUS", [("all", "16:10")], [("FARN", None), ("USK", 0), ("BES", 15), ("EMI", 30)]),
+ ("KISA BOGAZ TURU", [("all", "14:40")], [("EMI", 0), ("USK", 15), ("ORT", 30)]),
+ ("KADIKOY-SARIYER", [("wd", "07:50")], [("KAD", 0), ("BES", 25), ("FARN", None)]),
+ ("SARIYER-KADIKOY", [("wd", "19:00")], [("FARN", None), ("BES", 0), ("KAD", 30)]),
 ]
+
+# Duzensiz seferler (Bogaz hatti, Bostanci): (hat, gun, "ISKELE SAAT ISKELE SAAT ...", FARN/FARS saatsiz)
+TRIPS = [
+ ("BOGAZ HATTI", "wd", "EMI 08:00 BEY 08:25"),
+ ("BOGAZ HATTI", "wd", "EMI 17:15 BES 17:30 BEY 17:45 FARN"),
+ ("BOGAZ HATTI", "wd", "EMI 17:40 BES 17:55 BEY 18:10 FARN"),
+ ("BOGAZ HATTI", "wd", "EMI 17:55 BES 18:10 ORT 18:20 FARN"),
+ ("BOGAZ HATTI", "wd", "EMI 18:10 KAB 18:20 BES 18:25 ORT 18:35 FARN"),
+ ("BOGAZ HATTI", "wd", "EMI 18:20 BES 18:35 KUZ 18:45 BEY 18:55 FARN"),
+ ("BOGAZ HATTI", "wd", "EMI 18:35 BES 18:50 ORT 19:00 FARN"),
+ ("BOGAZ HATTI", "wd", "KAB 18:25 USK 18:35 KUZ 18:40 FARN"),
+ ("BOGAZ HATTI", "wd", "EMI 18:40 BES 18:55 ORT 19:05 FARN"),
+ ("BOGAZ HATTI", "wd", "EMI 19:00 BES 19:15 BEY 19:30 FARN"),
+ ("BOGAZ HATTI", "wd", "EMI 19:30 FARN"),
+ ("BOGAZ HATTI", "wd", "EMI 19:35 BES 19:50 KUZ 20:00 BEY 20:10 FARN"),
+ ("BOGAZ HATTI", "sat", "EMI 17:55 BES 18:10 ORT 18:20 FARN"),
+ ("BOGAZ HATTI", "sat", "EMI 18:10 KAB 18:20 BES 18:25 ORT 18:35 FARN"),
+ ("BOGAZ HATTI", "su", "EMI 18:20 BES 18:35 FARN"),
+ ("BOGAZ HATTI", "wd", "FARN BEY 07:15 KUZ 07:25 BES 07:35 EMI 07:50"),
+ ("BOGAZ HATTI", "wd", "FARN ORT 08:20 BES 08:30 EMI 08:45"),
+ ("BOGAZ HATTI", "wd", "FARN ORT 07:50 BES 08:00 EMI 08:20"),
+ ("BOGAZ HATTI", "wd", "FARN BES 07:45 EMI 08:00"),
+ ("BOGAZ HATTI", "wd", "FARN BES 07:55 EMI 08:15"),
+ ("BOGAZ HATTI", "wd", "FARN BEY 07:55 KUZ 08:05 BES 08:15 KAB 08:20 EMI 08:35"),
+ ("BOGAZ HATTI", "wd", "FARN USK 08:15 KAB 08:25"),
+ ("BOGAZ HATTI", "wd", "FARN BES 08:20 EMI 08:35"),
+ ("BOGAZ HATTI", "wd", "FARN BES 08:35 EMI 08:50"),
+ ("BOGAZ HATTI", "wd", "BEY 08:25 KUZ 08:35 BES 08:45 EMI 09:00"),
+ ("BOGAZ HATTI", "wd", "FARN BEY 08:50 BES 09:05 EMI 09:20"),
+ ("BOGAZ HATTI", "wd", "FARN BEY 18:30 BES 18:40 EMI 18:55"),
+ ("BOGAZ HATTI", "sat", "FARN BEY 07:15 BES 07:25 EMI 07:45"),
+ ("BOGAZ HATTI", "sat", "FARN ORT 08:05 BES 08:15 EMI 08:30"),
+ ("BOGAZ HATTI", "sat", "FARN BEY 07:55 BES 08:10 KAB 08:15 EMI 08:30"),
+ ("BOGAZ HATTI", "su", "FARN BES 08:10 EMI 08:25"),
+ ("BOSTANCI-KARAKOY-KABATAS", "wd", "FARS KAR 08:45 KAB 08:55"),
+ ("BOSTANCI-KARAKOY-KABATAS", "wd", "FARS KAR 09:40 KAB 10:00"),
+ ("BOSTANCI-KABATAS-KARAKOY", "wd", "FARS KAB 19:20 KAR 19:35"),
+ ("KARAKOY-KABATAS-BOSTANCI", "wd", "KAR 07:50 KAB 08:00 FARS"),
+ ("KARAKOY-KABATAS-BOSTANCI", "wd", "KAR 08:45 KAB 08:55 FARS"),
+ ("KABATAS-KARAKOY-BOSTANCI", "wd", "KAB 17:30 KAR 17:45 FARS"),
+]
+
+def _hm(s):
+    h, m = map(int, s.split(":"))
+    return h * 60 + m + (1440 if h < 5 else 0)   # gece yarisindan sonrasi onceki servis gunune
+
+def build_trips():
+    """-> [(hat, gun, [(iskele, dakika|None), ...])]"""
+    out = []
+    for line, deps, stops in PATTERNS:
+        for day, times in deps:
+            for hm in times.split():
+                t0 = _hm(hm)
+                out.append((line.strip(), day, [(p, None if o is None else t0 + o) for p, o in stops]))
+    for line, day, spec in TRIPS:
+        tok = spec.split(); seq = []; i = 0
+        while i < len(tok):
+            if tok[i].startswith("FAR"): seq.append((tok[i], None)); i += 1
+            else: seq.append((tok[i], _hm(tok[i + 1]))); i += 2
+        out.append((line, day, seq))
+    return out
+
+PIER_PATHS = json.loads('{"AYV-HAS":[[41.040481,28.943824],[41.039863,28.944832],[41.037713,28.949082],[41.036696,28.95216]],"AYV-SUT":[[41.040481,28.943824],[41.042727,28.944514]],"BAL-FEN":[[41.033551,28.950569],[41.030514,28.952991]],"BAL-HAS":[[41.033551,28.950569],[41.036696,28.95216]],"BES-BEY":[[41.038774,29.008009],[41.040158,29.023238],[41.044331,29.040278]],"BES-EMI":[[41.038774,29.008009],[41.026535,28.990705],[41.02128,28.977627],[41.018327,28.975041]],"BES-FARN":[[41.038774,29.008009],[41.045753,29.026769],[41.045595,29.032977],[41.058875,29.045167],[41.074665,29.050084],[41.075506,29.048731]],"BES-KAB":[[41.038774,29.008009],[41.032833,28.995299]],"BES-KAD":[[41.038774,29.008009],[41.031227,29.004887],[41.008586,29.000143],[40.993436,29.015831],[40.99275,29.020923]],"BES-KUZ":[[41.038774,29.008009],[41.039083,29.021831],[41.038759,29.031583]],"BES-ORT":[[41.038774,29.008009],[41.045753,29.026769]],"BES-USK":[[41.038774,29.008009],[41.028133,29.013007]],"BEY-BES":[[41.044331,29.040278],[41.040158,29.023238],[41.038774,29.008009]],"BEY-FARN":[[41.044331,29.040278],[41.058875,29.045167],[41.074665,29.050084],[41.075506,29.048731]],"BEY-KUZ":[[41.044331,29.040278],[41.038759,29.031583]],"EMI-BES":[[41.018327,28.975041],[41.02128,28.977627],[41.026535,28.990705],[41.038774,29.008009]],"EMI-BEY":[[41.018327,28.975041],[41.0206,28.983268],[41.026886,29.001171],[41.03443,29.016849],[41.043522,29.036803],[41.044331,29.040278]],"EMI-FARN":[[41.018327,28.975041],[41.02128,28.977627],[41.026535,28.990705],[41.033315,29.004991],[41.040158,29.023238],[41.046598,29.032977],[41.058875,29.045167],[41.074665,29.050084],[41.075506,29.048731]],"EMI-KAB":[[41.018327,28.975041],[41.0206,28.983268],[41.032833,28.995299]],"EMI-KAD":[[41.018327,28.975041],[41.0206,28.983268],[41.008586,29.000143],[40.993436,29.015831],[40.99275,29.020923]],"EMI-USK":[[41.018327,28.975041],[41.0206,28.983268],[41.024036,29.001011],[41.028133,29.013007]],"EYU-SUT":[[41.046273,28.942836],[41.042727,28.944514]],"FARN-BES":[[41.075506,29.048731],[41.074665,29.050084],[41.058875,29.045167],[41.045595,29.032977],[41.045753,29.026769],[41.038774,29.008009]],"FARN-BEY":[[41.075506,29.048731],[41.074665,29.050084],[41.058875,29.045167],[41.044331,29.040278]],"FARN-ORT":[[41.075506,29.048731],[41.074665,29.050084],[41.058875,29.045167],[41.045595,29.032977],[41.045753,29.026769]],"FARN-USK":[[41.075506,29.048731],[41.074665,29.050084],[41.058875,29.045167],[41.043133,29.030203],[41.028133,29.013007]],"FARS-KAB":[[40.967688,29.026724],[40.985206,29.010138],[40.997143,29.004661],[41.01673,28.998823],[41.032833,28.995299]],"FARS-KAR":[[40.967688,29.026724],[40.985206,29.010138],[41.004694,28.996658],[41.013515,28.989729],[41.019178,28.983843],[41.02128,28.977627]],"FEN-BAL":[[41.030514,28.952991],[41.033551,28.950569]],"FEN-HAS":[[41.030514,28.952991],[41.036696,28.95216]],"FEN-KAS":[[41.030514,28.952991],[41.028634,28.960126],[41.026236,28.965112]],"HAS-AYV":[[41.036696,28.95216],[41.037713,28.949082],[41.039863,28.944832],[41.040481,28.943824]],"HAS-BAL":[[41.036696,28.95216],[41.033551,28.950569]],"HAS-FEN":[[41.036696,28.95216],[41.030514,28.952991]],"HAS-KAS":[[41.036696,28.95216],[41.033471,28.952085],[41.029599,28.958164],[41.028634,28.960126],[41.026236,28.965112]],"HAS-SUT":[[41.036696,28.95216],[41.037713,28.949082],[41.039863,28.944832],[41.042727,28.944514]],"KAB-BES":[[41.032833,28.995299],[41.038774,29.008009]],"KAB-EMI":[[41.032833,28.995299],[41.0206,28.983268],[41.018327,28.975041]],"KAB-FARS":[[41.032833,28.995299],[41.01673,28.998823],[40.997143,29.004661],[40.985206,29.010138],[40.967688,29.026724]],"KAB-KAR":[[41.032833,28.995299],[41.026535,28.990705],[41.02128,28.977627]],"KAB-USK":[[41.032833,28.995299],[41.028133,29.013007]],"KAD-BES":[[40.99275,29.020923],[40.993436,29.015831],[41.008586,29.000143],[41.031227,29.004887],[41.038774,29.008009]],"KAD-KAR":[[40.99275,29.020923],[40.993436,29.015831],[41.008586,29.000143],[41.019178,28.983843],[41.02128,28.977627]],"KAD-KAS":[[40.99275,29.020923],[40.993436,29.015831],[41.008586,29.000143],[41.0206,28.983268],[41.018327,28.975041],[41.020159,28.969343],[41.026236,28.965112]],"KAR-EMI":[[41.02128,28.977627],[41.018327,28.975041]],"KAR-FARS":[[41.02128,28.977627],[41.019178,28.983843],[41.013515,28.989729],[41.004694,28.996658],[40.985206,29.010138],[40.967688,29.026724]],"KAR-KAB":[[41.02128,28.977627],[41.026535,28.990705],[41.032833,28.995299]],"KAR-KAD":[[41.02128,28.977627],[41.019178,28.983843],[41.008586,29.000143],[40.993436,29.015831],[40.99275,29.020923]],"KAR-KAS":[[41.02128,28.977627],[41.018327,28.975041],[41.020159,28.969343],[41.026236,28.965112]],"KAR-USK":[[41.02128,28.977627],[41.0206,28.983268],[41.024036,29.001011],[41.028133,29.013007]],"KAS-FEN":[[41.026236,28.965112],[41.028634,28.960126],[41.030514,28.952991]],"KAS-HAS":[[41.026236,28.965112],[41.028634,28.960126],[41.029599,28.958164],[41.033471,28.952085],[41.036696,28.95216]],"KAS-KAD":[[41.026236,28.965112],[41.020159,28.969343],[41.018327,28.975041],[41.0206,28.983268],[41.008586,29.000143],[40.993436,29.015831],[40.99275,29.020923]],"KAS-KAR":[[41.026236,28.965112],[41.020159,28.969343],[41.018327,28.975041],[41.02128,28.977627]],"KUZ-BES":[[41.038759,29.031583],[41.039083,29.021831],[41.038774,29.008009]],"KUZ-BEY":[[41.038759,29.031583],[41.044331,29.040278]],"KUZ-FARN":[[41.038759,29.031583],[41.047428,29.037118],[41.058875,29.045167],[41.074665,29.050084],[41.075506,29.048731]],"ORT-BES":[[41.045753,29.026769],[41.038774,29.008009]],"ORT-FARN":[[41.045753,29.026769],[41.045595,29.032977],[41.058875,29.045167],[41.074665,29.050084],[41.075506,29.048731]],"SUT-AYV":[[41.042727,28.944514],[41.040481,28.943824]],"SUT-EYU":[[41.042727,28.944514],[41.046273,28.942836]],"SUT-HAS":[[41.042727,28.944514],[41.039863,28.944832],[41.037713,28.949082],[41.036696,28.95216]],"USK-BES":[[41.028133,29.013007],[41.038774,29.008009]],"USK-EMI":[[41.028133,29.013007],[41.024036,29.001011],[41.0206,28.983268],[41.018327,28.975041]],"USK-FARN":[[41.028133,29.013007],[41.043133,29.030203],[41.058875,29.045167],[41.074665,29.050084],[41.075506,29.048731]],"USK-KAB":[[41.028133,29.013007],[41.032833,28.995299]],"USK-KAR":[[41.028133,29.013007],[41.024036,29.001011],[41.0206,28.983268],[41.02128,28.977627]],"USK-KUZ":[[41.028133,29.013007],[41.038759,29.031583]],"USK-ORT":[[41.028133,29.013007],[41.045753,29.026769]]}')
 
 FERRY_NAMES = ["FENERBAHCE", "KADIKOY", "BEYKOZ", "BARIS MANCO", "TURGUT OZAL", "SEMIHA SAKIR",
                "ERTUGRUL GAZI", "MEHMET AKIF ERSOY", "KAPTAN DERYA", "NAZIM HIKMET", "ORHAN GAZI",
-               "PAKSOY", "SAIT FAIK", "SEHIT MUSTAFA", "HALIC 1", "KUZGUNCUK"]
+               "PAKSOY", "SAIT FAIK", "SEHIT MUSTAFA", "HALIC 1", "KUZGUNCUK", "AHMET HAMDI TANPINAR"]
+CRUISE_KN = 11.0
 
-def _runs_on(daytype, service_wd):
-    # service_wd: 0=Pzt ... 6=Paz (servis gununun gunu)
-    if daytype == "all": return True
-    if daytype == "wd": return service_wd <= 4
-    if daytype == "ms": return service_wd <= 5
-    if daytype == "fs": return service_wd in (4, 5)
-    return False
+def _runs_on(day, wd):
+    # wd: servis gununun gunu, 0=Pzt ... 6=Paz
+    return {"all": True, "wd": wd <= 4, "ms": wd <= 5, "sat": wd == 5, "su": wd == 6,
+            "we": wd >= 5, "fs": wd in (4, 5)}.get(day, False)
 
 class Ferries:
     BEFORE = 6 * 60      # kalkistan once iskelede bekleme (sn)
-    AFTER = 3 * 60       # varistan sonra iskelede kalma (sn)
+    AFTER = 3 * 60       # son iskeleye varistan sonra kalma (sn)
+    DWELL = 60           # ara iskelede bekleme (sn)
 
-    def __init__(self, paths):
-        self.paths = {k: seg_info(v) for k, v in paths.items()}
-        self.trips = []  # (line, minutes_from_service_day_start, daytype, legs)
-        for line, times, legs in TIMETABLE:
-            for daytype, s in times:
-                for hm in s.split():
-                    h, m = map(int, hm.split(":"))
-                    mins = h * 60 + m + (1440 if h < 5 else 0)   # gece yarisindan sonrasi -> onceki gun
-                    self.trips.append((line, mins, daytype, legs))
+    def __init__(self):
+        self.paths = {k: seg_info(v) for k, v in PIER_PATHS.items()}
+        self.trips = []
+        for line, day, seq in build_trips():
+            legs = []
+            names = [p for p, _ in seq]
+            for x, y in zip(names, names[1:]):
+                legs.append(self.paths[x + "-" + y])
+            # FAR uclarinin saatini seyir hizindan hesapla
+            times = [t for _, t in seq]
+            v = CRUISE_KN * KN * 60.0   # m/dk
+            if times[0] is None:
+                times[0] = times[1] - legs[0][1] / v
+            if times[-1] is None:
+                times[-1] = times[-2] + legs[-1][1] / v
+            far_start, far_end = seq[0][0].startswith("FAR"), seq[-1][0].startswith("FAR")
+            # olaylar: her iskele icin (varis, kalkis) saniye
+            ev = []
+            n = len(times)
+            for i, t in enumerate(times):
+                t = t * 60.0
+                if i == 0:
+                    ev.append((t if far_start else t - self.BEFORE, t))
+                elif i == n - 1:
+                    ev.append((t, t if far_end else t + self.AFTER))
+                else:
+                    gap = (times[i] - times[i - 1]) * 60.0
+                    ev.append((t - min(self.DWELL, gap / 4), t))
+            small = line.startswith("HALIC") or "Dentur" in line
+            self.trips.append((line, day, legs, ev, 40 if small else 72))
 
     @staticmethod
     def _now_local():
+        import datetime
         try:
             from zoneinfo import ZoneInfo
-            import datetime
             return datetime.datetime.now(ZoneInfo("Europe/Istanbul"))
         except Exception:
-            import datetime
             return datetime.datetime.now()
 
-    def _leg_state(self, info, reverse, dur_s, t):
+    @staticmethod
+    def _leg_state(info, dur_s, t):
         """t: legin baslangicindan beri gecen sn -> (lat, lon, brg, sog_kn)"""
         L = info[1]
+        dur_s = max(dur_s, 1.0)
+        # tarife suresi bu mesafe icin cok uzunsa iskelede biraz daha bekle, sonra en az ~7 knotla git
+        sail = min(dur_s, max(L / (7.0 * KN) + 60, 1.0))
+        t -= dur_s - sail
+        dur_s = sail
         a = min(70.0, dur_s / 4); b = min(100.0, dur_s / 4)
         v = L / max(1.0, dur_s - a / 2 - b / 2)
         if t <= 0: s, sp = 0.0, 0.0
@@ -383,38 +481,36 @@ class Ferries:
         elif t < dur_s:
             r = dur_s - t; s, sp = L - 0.5 * v / b * r * r, v * r / b
         else: s, sp = L, 0.0
-        if reverse: s = L - s
         lat, lon, brg = along(info, s)
-        if reverse: brg = (brg + 180) % 360
         return lat, lon, brg, sp / KN
 
-    def snapshot(self, now_ts=None):
+    def snapshot(self, now=None):
         import datetime
-        now = self._now_local() if now_ts is None else now_ts
+        now = self._now_local() if now is None else now
         out = []
-        for back in (0, 1):                       # bugunun ve dunun servis gunu
-            day = (now - datetime.timedelta(days=back)).replace(hour=0, minute=0, second=0, microsecond=0)
-            wd = day.weekday()
-            for idx, (line, mins, daytype, legs) in enumerate(self.trips):
-                if not _runs_on(daytype, wd): continue
-                dep = day + datetime.timedelta(minutes=mins)
-                el = (now - dep).total_seconds()
-                total = sum((d + w) * 60 for _, _, d, w in legs)
-                if el < -self.BEFORE or el > total + self.AFTER: continue
-                t = el
-                for path, rev, d, w in legs:
-                    D, W = d * 60, w * 60
-                    if t <= D or (path, rev, d, w) == legs[-1]:
-                        lat, lon, brg, sog = self._leg_state(self.paths[path], rev, D, t)
+        for back in (0, 1):
+            day0 = (now - datetime.timedelta(days=back)).replace(hour=0, minute=0, second=0, microsecond=0)
+            wd = day0.weekday()
+            el0 = (now - day0).total_seconds()
+            for idx, (line, day, legs, ev, length) in enumerate(self.trips):
+                if not _runs_on(day, wd): continue
+                if el0 < ev[0][0] or el0 > ev[-1][1]: continue
+                st = None
+                for i, (arr, dep) in enumerate(ev):
+                    if arr <= el0 <= dep:          # iskelede
+                        info = legs[i] if i < len(legs) else legs[-1]
+                        tt = 0 if i < len(legs) else 1e9
+                        lat, lon, brg, _ = self._leg_state(info, 1, tt)
+                        st = (lat, lon, brg, 0.0)
                         break
-                    t -= D
-                    if t <= W:
-                        lat, lon, brg, sog = self._leg_state(self.paths[path], rev, D, D)
+                    if i + 1 < len(ev) and dep < el0 < ev[i + 1][0]:   # seyirde
+                        st = self._leg_state(legs[i], ev[i + 1][0] - dep, el0 - dep)
                         break
-                    t -= W
-                sid = 800000000 + (int(dep.timestamp() // 60) * 31 + idx) % 100000000
-                out.append({"id": sid, "name": FERRY_NAMES[idx % len(FERRY_NAMES)], "cat": "passenger",
-                            "len": 40 if line.startswith("HALIC") or "BESIKTAS-USK" in line or "USKUDAR-BES" in line else 72,
+                if st is None: continue
+                lat, lon, brg, sog = st
+                dep_min = int((day0.timestamp() + ev[0][1]) // 60)
+                out.append({"id": 800000000 + (dep_min * 31 + idx) % 100000000,
+                            "name": FERRY_NAMES[idx % len(FERRY_NAMES)], "cat": "passenger", "len": length,
                             "lat": lat, "lon": lon, "sog": round(sog, 1), "cog": round(brg, 1),
                             "hdg": round(brg), "nav": 0 if sog > 0.3 else 5, "t": time.time(),
                             "line": line, "sim": True})
@@ -484,7 +580,7 @@ def main():
         log("mod: simulasyon (API anahtari yok)" if not cfg["api_key"] else "mod: simulasyon")
     State.sim = Sim()
     State.sim.start()
-    State.ferries = Ferries(SIM_ROUTES["ferry_paths"])
+    State.ferries = Ferries()
     srv = ThreadingHTTPServer(("127.0.0.1", int(cfg["port"])), Handler)
     log(f"http://127.0.0.1:{cfg['port']}/ships.json")
     try:

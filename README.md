@@ -24,10 +24,16 @@ Gemi trafiği simülasyonu ─────┘     (systemd user servisi)
 
 ## Özellikler
 
-- **Tarifeli vapurlar:** Şehir Hatları 2026-27 kış tarifesi. Kadıköy–Karaköy–Eminönü,
-  Üsküdar–(Karaköy)–Eminönü ve Kadıköy–Beşiktaş hatlarında hafta içi, Cumartesi ve Pazar
-  farkları ile Cuma ve Cumartesi gece seferleri var. Üsküdar–Beşiktaş ve Haliç hatlarının
-  saatleri yaklaşık.
+- **Tarifeli vapurlar (Şehir Hatları 2026-27 kış tarifesi, 18 iskele):**
+  - Karşıyaka hatları: Kadıköy–Karaköy–Eminönü, Üsküdar–(Karaköy)–Eminönü, Kadıköy–Beşiktaş
+    (Cuma/Cumartesi gece seferleri dahil), Üsküdar–Beşiktaş (Dentur, ~15 dk, yaklaşık)
+  - Haliç: Üsküdar–Eyüp, Beşiktaş–Eyüp, Kadıköy–Eyüp (Kasımpaşa, Fener, Balat, Hasköy,
+    Ayvansaray, Sütlüce iskeleleriyle)
+  - Boğaz: Boğaz hattı, Eminönü–Rumeli Kavağı, Ortaköy–Beşiktaş–Eminönü, Uzun ve Kısa Boğaz
+    Turu, Kadıköy–Sarıyer, Bostancı–Karaköy–Kabataş. Görüntünün dışındaki iskelelere giden
+    vapurlar köprünün kuzeyinden (ya da Moda açığından) çıkar ve oradan girer.
+  - Hafta içi, Cumartesi ve Pazar farkları işlenmiştir; vapur kalkıştan 6 dk önce iskeleye
+    yanaşır, ara iskelelerde kısa durur.
 - **Gemi trafiği:** Transit gemiler Boğaz'ın trafik düzenine göre iki yönde geçer.
 - **Canlı AIS (karma mod):** [AISStream.io](https://aisstream.io) ile görüntü alanına giren gerçek
   gemiler çizilir. Gerçek veri yeterli olduğunda simülasyon kendiliğinden çekilir.
